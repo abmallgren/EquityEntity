@@ -1,0 +1,97 @@
+﻿@using EntityEquity.Common
+@using EntityEquity.Data
+@using EntityEquity.Data.Models
+@using EntityEquity.Hubs
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
+@inject CookieBridgeConnection CookieBridgeConnection
+@inject IHubContext<EntityHub> HubContext
+@inject ILogger<OrderQuantity> Logger
+
+    <div>
+        <button @onclick="OnDecreaseClick" type="button" disabled="@DisableDecrease">-</button>
+        <input type="number" @onchange="OnCountChange" value="@Count" />
+        <button @onclick="OnIncreaseClick" type="button">+</button>
+    </div>
+
+@code {
+    [Parameter]
+    public OfferingWithOrderItem Offering { get; set; }
+    [Parameter]
+    public string Cookie { get; set; }
+    public int Count { get; set; } = 0;
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        hubConnection = CookieBridgeConnection.GetHubConnection("/entityhub", Cookie!);
+
+        hubConnection.On("OnUpdatedOrder", async () =>
+        {
+            await HubContext.Clients.All.SendAsync("UpdateOrders");
+        });
+
+        hubConnection.On("UpdateOrders", async () =>
+        {
+            SetCount();
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await SetCount();
+    }
+    private async Task SetCount()
+    {
+        //Offering = await hubConnection.InvokeAsync<OfferingWithOrderItem>("GetOfferingDetails", Offering.Offering.OfferingId);
+        if (Offering is not null && Offering.OrderItem is not null)
+        {
+            Count = Offering.OrderItem.Quantity;
+        }
+        else
+        {
+            Count = 0;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+    private bool DisableDecrease 
+    {
+        get
+        {
+            return Count == 0;
+        }
+    }
+    private async Task OnCountChange(ChangeEventArgs args)
+    {
+        if (args.Value is not null)
+        {
+            Count = int.Parse((string)args.Value);
+            await UpdateOrder();
+        }
+    }
+    private async Task OnDecreaseClick()
+    {
+        if (Count>0)
+        {
+            Count--;
+            await UpdateOrder();
+        }
+    }
+    private async Task OnIncreaseClick()
+    {
+        Count++;
+        await UpdateOrder();
+    }
+
+    private async Task UpdateOrder()
+    {
+        if (hubConnection is not null)
+        {
+            OrderItem item = new() { Offering = Offering.Offering, Property = Offering.Property, Quantity = Count };
+            await hubConnection.SendAsync("UpdateOrder", item);
+        }
+    }
+}

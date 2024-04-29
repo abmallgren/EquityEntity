@@ -1,0 +1,8 @@
+﻿@page "/insights/equity/{slug}"
+@using EntityEquity.Components.Insights
+@model EntityEquity.Areas.Insights.Pages.EquityModel
+@{
+    Layout = "_LayoutProp";
+    var cookie = HttpContext.Request.Cookies[".AspNetCore.Identity.Application"];
+}
+@(await Html.RenderComponentAsync(typeof(EquityOfferTable), RenderMode.ServerPrerendered, new { Cookie = cookie, Slug = Model.Slug }))

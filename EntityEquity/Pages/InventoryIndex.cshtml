@@ -1,0 +1,12 @@
+﻿@page "/Inventory"
+@model EntityEquity.Pages.InventoryIndexModel
+@using EntityEquity.Components
+@using Microsoft.AspNetCore.Identity
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Inventory Manager";
+    var cookie = HttpContext.Request.Cookies[".AspNetCore.Identity.Application"];
+
+}
+@(await Html.RenderComponentAsync(typeof(InventoryPanel), RenderMode.ServerPrerendered, new { Cookie = cookie }))
+@(await Html.RenderComponentAsync(typeof(AddAnInventoryModal), RenderMode.ServerPrerendered, new { Cookie = cookie, UserId = Model.UserId }))

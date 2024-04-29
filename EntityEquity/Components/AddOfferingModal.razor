@@ -1,0 +1,274 @@
+﻿@using EntityEquity.Common
+@using EntityEquity.Data
+@using EntityEquity.Extensions
+@using EntityEquity.Hubs
+@using EntityEquity.Models
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.AspNetCore.Hosting
+@using Microsoft.Extensions.Logging
+
+@using System 
+@using System.IO
+@using System.Net
+@inject CookieBridge CookieBridge
+@inject CookieBridgeConnection CookieBridgeConnection
+@inject IConfiguration configuration
+@inject IHubContext<EntityHub> HubContext
+@inject IHttpClientFactory httpClientFactory
+@inject IJSRuntime JS
+@inject ILogger<AddOfferingModal> Logger
+@inject IWebHostEnvironment Environment
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+<EditForm OnValidSubmit="ValidSubmit" OnInvalidSubmit="Invalid" Model="@model">
+    <DataAnnotationsValidator />
+    
+    <div class="modal fade" id="addOfferingModal" tabindex="-1" aria-labelledby="addOfferingModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addOfferingModalLabel">Add offerings</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+                <div class="row">
+                    <Microsoft.AspNetCore.Components.Forms.ValidationSummary />
+                </div>
+                <div class="row">
+                    <label class="col-md-4">Url Slug</label>
+                    <input id="addOfferingSlug" class="col-md-8" type="text" @bind-value="model.Slug" />
+                </div>
+                <div class="row">
+                    <label class="col-md-4">Name</label>
+                    <input id="addOfferingName" class="col-md-8" type="text" @bind-value="model.Name" />
+                </div>
+                <div class="row">
+                    <label class="col-md-4">Short Description</label>
+                    <textarea id="addOfferingDescription" class="col-md-8" @bind="model.Description" />
+                </div>
+                <div class="row">
+                    <label class="col-md-4">Long Description</label>
+                    <textarea id="addOfferingExtendedDescription" class="col-md-8" @bind="model.ExtendedDescription"></textarea>
+                </div>
+                <div class="row">
+                    <label class="col-md-4">Images</label>
+                    <InputFile class="col-md-8" id="addOfferingFileUpload" OnChange="UploadFiles" multiple />
+                </div>
+                <div class="row">
+                    <div style="display:inline" class="col-md-8 offset-md-4">
+
+                        @if (isLoading)
+                        {
+                            <p>Progress: @string.Format("{0:P0}", progressPercent)</p>
+                        }
+                        else
+                        {
+                            <ul>
+                                @foreach (var file in loadedFiles)
+                                {
+                                    <li>
+                                        <ul>
+                                            <li>Name: @file.Name</li>
+                                            <li>Last modified: @file.LastModified.ToString()</li>
+                                            <li>Size (bytes): @file.Size</li>
+                                            <li>Content type: @file.ContentType</li>
+                                        </ul>
+                                    </li>
+                                }
+                            </ul>
+                        }
+
+                    </div>
+                </div>
+
+                <div class="row">
+                    <label class="col-md-4">Properties</label>
+                    <select id="addOfferingProperties" class="col-md-8" multiple @bind="model.PropertyIdsStrings">
+                        @foreach (var property in Properties)
+                        {
+                            <option value="@property.PropertyId">@property.Name</option> 
+                        }
+                        </select>
+                </div>
+                <div class="row">
+                    <label class="col-md-4">Inventories</label>
+                    <select id="addOfferingInventories" class="col-md-8" multiple @onchange="OnChangeInventory">
+                        @foreach (var inventory in Inventories)
+                        {
+                            <option value="@inventory.InventoryId">@inventory.Name</option> 
+                        }
+                        </select>
+                </div>
+                <div class="row">
+                    <label class="col-md-4">Inventory Item</label>
+                    <select id="addOfferingInventoryItem" class="col-md-8" multiple @bind="model.InventoryItemIdStrings">
+                        @foreach (var inventoryItem in InventoryItems)
+                        {
+                            <option value="@inventoryItem.InventoryItemId">@inventoryItem.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="row">
+                    <label for="addOfferingPrice" class="col-md-4">Price</label>
+                    <input id="addOfferingPrice" class="col-md-8" type="text" @bind="model.Price" />
+                </div>
+                <div class="row">
+                    <label for="addOfferingMustShip" class="col-md-4">Must Ship</label>
+                    <input id="addOfferingMustShip" class="col-md-8" type="checkbox" @bind="model.MustShip" />
+                </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+</EditForm>
+@code {
+    [Parameter]
+    public Property? Property { get; set; }
+    [Parameter]
+    public string? UserId { get; set; }
+    [Parameter]
+    public string? Cookie { get; set; }
+
+    private List<IBrowserFile> loadedFiles = new();
+    private long maxFileSize = 5_000_000;
+    private int maxAllowedFiles = 5;
+    private bool isLoading;
+    private decimal progressPercent;
+
+    private HubConnection? hubConnection;
+    private List<Property> Properties = new();
+    private List<Inventory> Inventories = new();
+    private List<InventoryItem> InventoryItems = new();
+    private OfferingModel model = new();
+    private int[] SelectedInventory = new int[0];
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = CookieBridgeConnection.GetHubConnection("/entityhub", Cookie!);
+
+        hubConnection.On("OnAddedOffering", async () =>
+        {
+            await HubContext.Clients.All.SendAsync("UpdateOfferings");
+        });
+
+        await hubConnection.StartAsync();
+
+        await PopulateData();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        //await JS.InvokeVoidAsync("InitTinyMce", new object[1] { "#addOfferingExtendedDescription" });
+    }
+
+    private async Task PopulateData()
+    {
+        if (hubConnection is not null)
+        {
+            Properties = await hubConnection.InvokeAsync<List<Property>>("GetProperties");
+            Inventories = await hubConnection.InvokeAsync<List<Inventory>>("GetInventories");
+            InventoryItems = await hubConnection.InvokeAsync<List<InventoryItem>>("GetInventoryItems", SelectedInventory);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        isLoading = true;
+        loadedFiles.Clear();
+        progressPercent = 0;
+        model.PhotoUrls = new List<PhotoUrl>();
+
+        foreach (var file in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            try
+            {
+                string extension = Path.GetExtension(file.Name);
+                if (String.IsNullOrEmpty(extension))
+                {
+                    throw new Exception("Filename must have an extension.");
+                }
+                string guid = Guid.NewGuid().ToString();
+                var path = GetImageFilename(guid, extension);
+                while (File.Exists(path))
+                {
+                    guid = Guid.NewGuid().ToString();
+                    path = GetImageFilename(guid, extension);
+                }
+
+                await ProcessFile(path, file);
+
+                model.PhotoUrls.Add(new PhotoUrl() { Url = $"/images/{guid}{extension}" });
+                loadedFiles.Add(file);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("File: {Filename} Error: {Error}", 
+                    file.Name, ex.Message);
+            }
+        }
+
+        HttpClient httpClient = httpClientFactory.CreateClient("DefaultHttpClient");
+        //var response = await httpClient.PostAsync($"{configuration["ImageHostingRoot"]}api/image?extension=" + extension, new ByteArrayContent(bytes));
+        //string guid = await response.Content.ReadAsStringAsync();
+    }
+    private async Task ProcessFile(string path, IBrowserFile file)
+    {
+        await using FileStream writeStream = new(path, FileMode.Create);
+        using var readStream = file.OpenReadStream(maxFileSize);
+        var bytesRead = 0;
+        var totalRead = 0;
+        var buffer = new byte[1024 * 10];
+
+        while ((bytesRead = await readStream.ReadAsync(buffer)) != 0)
+        {
+            totalRead += bytesRead;
+            await writeStream.WriteAsync(buffer, 0, bytesRead);
+            progressPercent = Decimal.Divide(totalRead, file.Size);
+            StateHasChanged();
+        }
+    }
+    private string GetImageFilename(string guid, string extension)
+    {
+        var file = $"{guid}{extension}";
+        var path = Path.Combine(Environment.ContentRootPath,
+            "wwwroot", "images", file);
+        return path;
+    }
+    private async void ValidSubmit()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.SendAsync("AddOfferings", model);
+        }
+        await JS.InvokeVoidAsync("HideModal", new object[1] { "#addOfferingModal" });
+    }
+
+    private void Invalid()
+    {
+        
+    }
+
+    private async void OnChangeInventory(ChangeEventArgs e)
+    {
+        if (e.Value is not null)
+        {
+            SelectedInventory = ((string[])e.Value).ToIntArray();
+            InventoryItems = await hubConnection.InvokeAsync<List<InventoryItem>>("GetInventoryItems", SelectedInventory);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

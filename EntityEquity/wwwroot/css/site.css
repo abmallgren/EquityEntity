@@ -1,0 +1,185 @@
+:root {
+    --dark-blue: #192E47;
+    --mid-blue: #314F76;
+}
+html {
+  font-size: 14px;
+}
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+.site-title {
+    font-weight:normal;
+    font-size:1.2rem;
+}
+.root-section {
+    margin: 10px;
+}
+
+
+.table-blue {
+    color:white;
+}
+.table-blue a {
+    color:lightgrey;
+}
+.table-blue a:hover {
+    color:grey;
+}
+.table-blue, th, td {
+    border: 1px solid grey;
+    padding: 3px 7px;
+}
+.table-blue thead tr {
+    background-color: var(--dark-blue);
+}
+.table-blue tbody tr:nth-child(odd) {
+    background-color: var(--mid-blue);
+}
+.table-blue tbody tr:nth-child(even) {
+    background-color: var(--dark-blue);
+}
+.flex-tile-band {
+    display: flex;
+    flex-wrap: wrap;
+    background-color: var(--dark-blue);
+}
+
+.tile {
+    border: 1px solid grey;
+    padding: 4px 7px 7px 7px;
+    margin: 8px;
+    background-color: var(--mid-blue);
+    color: white;
+    height: fit-content;
+}
+.tile-title {
+    text-decoration:underline;
+    text-align:center;
+}
+.tile a {
+    color: lightgray;
+}
+.tile a:hover {
+    color: gray;
+}
+.navbar-brand {
+    background-color: var(--mid-blue);
+    border: solid 1px grey;
+    color: white !important;
+}
+.site-title {
+    padding: 0px 10px;
+    font-size: 1.5rem
+}
+.nav-link {
+    background-color: var(--mid-blue);
+    color: white !important;
+    border: solid 1px grey;
+    margin: 0px 5px;
+}
+.hide {
+    display: none;
+}
+
+.panel-section-title {
+    font-size: 1rem;
+    text-align: center;
+    margin-bottom: 20px;
+    margin-top: 15px;
+}
+
+.flex-wrap-page {
+    display: flex;
+    flex-wrap: wrap;
+    background-color:var(--dark-blue)
+}
+.action-panel {
+    width: 100%;
+    max-width: 325px;
+    border: solid 1px grey;
+    padding: 0px 10px 10px 10px;
+    background-color: var(--mid-blue);
+    color: white;
+}
+.action-panel-grid {
+    display: grid;
+    grid-template-columns: 85px 5fr;
+    row-gap: 10px
+}
+.action-panel-button {
+    text-align: center;
+    margin-bottom:15px;
+}
+.prop-offering {
+    margin: 10px;
+    max-width: 250px;
+}
+
+    .prop-offering input {
+        text-align: center;
+        width: 100px;
+    }
+
+.offering-panel-offering {
+    margin-right: 15px;
+    margin-top: 10px;
+}
+
+.offering-panel-image-container {
+    height: 200px;
+    min-width: 250px;
+}
+
+.offering-panel-image {
+    width: 250px;
+    height: 200px;
+}
+
+.no-image {
+    background-color: lightgray;
+    margin: auto;
+    text-align: center;
+    padding: 85px 0px;
+    font-size: 20px;
+    min-width: 250px
+}
+
+.prop-item-image {
+    width: 250px;
+    height: 200px;
+}
+
+.tabContainer {
+    color: white;
+}
+
+.tabContainer div {
+    background-color: var(--dark-blue);
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+    padding: 5px 10px;
+    border: solid 1px grey;
+    cursor: pointer;
+}
+
+.tabContainer div.active {
+    background-color: var(--mid-blue);
+}
+
+button.deactivate {
+    background-color:red;
+    color:white;
+}

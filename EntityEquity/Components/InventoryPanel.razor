@@ -1,0 +1,141 @@
+﻿@using EntityEquity.Common
+@using EntityEquity.Components
+@using EntityEquity.Components.Shared
+@using EntityEquity.Data
+@using EntityEquity.Extensions
+@using EntityEquity.Models
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Globalization
+@inject CookieBridgeConnection CookieBridgeConnection
+@inject IJSRuntime JS
+
+<PropertyTabs ActiveTab="PropertyTabs.PropertyTabType.Inventory"></PropertyTabs>
+
+<div class="flex-wrap-page">
+    <div class="action-panel">
+        <h2 class="panel-section-title">Filter/Action Target</h2>
+        <div class="action-panel-grid">
+            <label for="inventories">Inventory</label>
+            <select id="inventories" multiple @onchange="OnChangeInventory">
+                @if (Inventories!=null)
+                {
+                    foreach(var inventory in Inventories)
+                    {
+                        <option value="@inventory.InventoryId">@inventory.Name</option>
+                    }
+                }
+            </select>
+            @if (SelectedInventory.Length > 0)
+            {
+                <button style="grid-column-start:2" type="button" class="deactivate" @onclick="OnClickInventoryDeactivate">Deactivate</button>
+            }
+        </div>
+        <h2 class="panel-section-title">Actions</h2>
+        <div class="action-panel-button">
+            <button type="button" data-bs-toggle="modal" data-bs-target="#addAnInventoryModal">Add An Inventory</button>
+        </div>
+        <div class="action-panel-button">
+            <button type="button" data-bs-toggle="modal" data-bs-target="#addAnInventoryItemModal">Add An Inventory Item</button>
+        </div>
+    </div>
+
+    <div style="display:flex;">
+        @if (InventoryItems is not null)
+        {
+            foreach(var inventoryItem in InventoryItems)
+            {
+                <div class="tile">
+                    @inventoryItem.Name
+                    <div>
+                        Cost: @inventoryItem.Cost.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))
+                    </div>
+                    <button type="button" onclick="@(() => OnClickInventoryItemDeactivate(inventoryItem.InventoryItemId))" class="deactivate">Deactivate</button>
+               </div>
+            }
+        }
+        <div>
+            <div>
+            
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<AddAnInventoryItemModal InventoryIds=@SelectedInventory Cookie="@Cookie"></AddAnInventoryItemModal>
+
+@code {
+    [Parameter]
+    public string? Cookie { get; set; }
+
+    private List<Inventory>? Inventories { get; set; }
+    private int[] SelectedInventory = new int[0];
+    private List<InventoryItem>? InventoryItems { get; set; }
+
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = CookieBridgeConnection.GetHubConnection("/entityhub", Cookie!);
+
+        hubConnection.On("UpdateInventories", async () =>
+        {
+            await UpdateInventories();
+        });
+
+        hubConnection.On("UpdateInventoryItems", async () =>
+        {
+            await UpdateInventoryItems();
+        });
+
+        hubConnection.On("OnInventoriesDeactivated", async () =>
+        {
+            UpdateInventories();
+        });
+
+        await hubConnection.StartAsync();
+
+        await UpdateInventories();
+
+        await UpdateInventoryItems();
+    }
+    private async Task OnChangeInventory(ChangeEventArgs e)
+    {
+        if (e.Value is not null)
+        {
+            SelectedInventory = ((string[])e.Value).ToIntArray();
+            await UpdateInventoryItems();
+        }
+    }
+    private async Task OnClickInventoryDeactivate()
+    {
+        await hubConnection.InvokeAsync("DeactivateInventories", SelectedInventory);
+        await UpdateInventories();
+        await JS.InvokeVoidAsync("UnselectOptions", new object[1] { "#inventories" });
+        SelectedInventory = new int[0];
+        UpdateInventoryItems();
+        InvokeAsync(StateHasChanged);
+    }
+    private async Task OnClickInventoryItemDeactivate(int inventoryItemId)
+    {
+        await hubConnection.InvokeAsync("DeactivateInventoryItem", inventoryItemId);
+        UpdateInventoryItems();
+    }
+    private async Task UpdateInventories()
+    {
+        if (hubConnection is not null)
+        {
+            Inventories = await hubConnection.InvokeAsync<List<Inventory>>("GetInventories");
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task UpdateInventoryItems()
+    {
+        if (hubConnection is not null)
+        {
+            InventoryItems = await hubConnection.InvokeAsync<List<InventoryItem>>("GetInventoryItems", SelectedInventory);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}

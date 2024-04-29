@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32112.339
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EntityEquity", "EntityEquity\EntityEquity.csproj", "{2E28E705-3DAF-4199-8B1A-D7EDD062B387}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nexus", "Nexus\Nexus.csproj", "{71F47A6F-DDE7-4188-93B9-D8F4EDA8B0A3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2E28E705-3DAF-4199-8B1A-D7EDD062B387}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E28E705-3DAF-4199-8B1A-D7EDD062B387}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E28E705-3DAF-4199-8B1A-D7EDD062B387}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E28E705-3DAF-4199-8B1A-D7EDD062B387}.Release|Any CPU.Build.0 = Debug|Any CPU
+		{71F47A6F-DDE7-4188-93B9-D8F4EDA8B0A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71F47A6F-DDE7-4188-93B9-D8F4EDA8B0A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71F47A6F-DDE7-4188-93B9-D8F4EDA8B0A3}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{71F47A6F-DDE7-4188-93B9-D8F4EDA8B0A3}.Release|Any CPU.Build.0 = Debug|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CE66AF4F-8300-4FF6-8085-0C3F1B3F172A}
+	EndGlobalSection
+EndGlobal

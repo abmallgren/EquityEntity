@@ -1,0 +1,39 @@
+﻿@using EntityEquity.Common
+@using EntityEquity.Components.External
+@using EntityEquity.Data
+@using EntityEquity.Data.Models;
+@using EntityEquity.Hubs
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Globalization
+@inject CookieBridgeConnection CookieBridgeConnection
+@inject IHubContext<EntityHub> HubContext
+<div class="prop-offering">
+
+    @if (Offering.Photos is not null && Offering.Photos.Count() > 0)
+    {
+        <img class="prop-item-image" src="@Offering.Photos.FirstOrDefault().Url" />
+    }
+    else
+    {
+        <div class="no-image">No Image</div>
+    }
+    <div>@Offering.Offering.Name</div>
+    <div>@Offering.Offering.Description</div>
+    <div><a href="/OfferingDetails/@Offering.Offering.OfferingId">View Details</a></div>
+    <div>@Offering.Offering.Price.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</div>
+    <OrderQuantity Cookie=@Cookie Offering=@Offering />
+    @if (!RenderedOnPropertyPage)
+    {
+        <a href="/prop/@Offering.Property.Slug">View Property</a>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public OfferingWithOrderItem Offering { get; set; }
+    [Parameter]
+    public string Cookie { get; set; }
+    [Parameter]
+    public bool RenderedOnPropertyPage { get; set; }
+}

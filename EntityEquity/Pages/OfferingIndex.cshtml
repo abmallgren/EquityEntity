@@ -1,0 +1,14 @@
+﻿@page "/Offering"
+@model EntityEquity.Pages.OfferingIndexModel
+@using EntityEquity.Components
+@using Microsoft.AspNetCore.Identity
+
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Offerings Manager";
+}
+@{
+    var cookie = HttpContext.Request.Cookies[".AspNetCore.Identity.Application"];
+}
+@(await Html.RenderComponentAsync(typeof(OfferingPanel), RenderMode.ServerPrerendered, new { Cookie = cookie }))
+@(await Html.RenderComponentAsync(typeof(AddOfferingModal), RenderMode.ServerPrerendered, new { Cookie = cookie }))

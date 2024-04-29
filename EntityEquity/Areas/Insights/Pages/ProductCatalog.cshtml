@@ -1,0 +1,43 @@
+﻿@page "/insights/product-catalog/{slug}"
+@model EntityEquity.Pages.Insights.ProductCatalogModel
+@{
+    Layout = "_LayoutInsight";
+}
+<table style="margin:auto;" id="productCatalogTable">
+    <thead>
+    <tr>
+        <th>Inventory ID</th>
+        <th>Offering ID</th>
+        <th>Inventory Name</th>
+        <th>Offering Name</th>
+        <th>Inventory Cost (COGS)</th>
+        <th>Offering Price</th>
+        <th>Profit</th>
+        <th>Profit Margin</th>
+    </tr>
+    </thead>
+    <tbody>
+        @foreach(var item in Model.Items)
+        {
+            <tr>
+                <td>@item.InventoryItem.InventoryItemId</td>
+                <td>@item.Offering.OfferingId</td>
+                <td>@item.InventoryItem.Name</td>
+                <td>@item.Offering.Name</td>
+                <td>$@item.InventoryItem.Cost</td>
+                <td>$@item.Offering.Price</td>
+                <td>$@(item.Offering.Price - item.InventoryItem.Cost)</td>
+                <td>@(((item.Offering.Price - item.InventoryItem.Cost) / item.Offering.Price ) * 100)%</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<script>
+    window.onload = function() {
+        $(document).ready(()=>
+        {
+            $('#productCatalogTable').DataTable();
+        });
+    }
+</script>

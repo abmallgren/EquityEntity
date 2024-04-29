@@ -1,0 +1,25 @@
+﻿@page "/fulfillment/notification/order/{orderId}/{emailAddress}"
+@using System.Globalization
+@model EntityEquity.Areas.Fulfillment.OrderNotificationModel
+@{
+
+}
+
+<div style="text-align:center;">
+    @{
+        decimal total = 0;
+    }
+    @foreach(var i in Model.InvoiceWithInvoiceItems)
+    {
+        decimal invoiceTotal = 0;
+        <div>Invoice #@i.Invoice.InvoiceId</div>
+        <div>@i.Invoice.Property.Name</div>
+        foreach(var ii in i.InvoiceItems)
+        {
+            <div>@ii.Name</div>
+            <div>@ii.Price.ToString("C", CultureInfo.CreateSpecificCulture("en-US")) X @ii.Quantity = @((ii.Price * ii.Quantity).ToString("C", CultureInfo.CreateSpecificCulture("en-US")))</div>
+            invoiceTotal += ii.Price * ii.Quantity;
+            total += invoiceTotal;
+        }
+    } 
+</div>

@@ -1,0 +1,46 @@
+﻿@page "/insights/sales/{slug}"
+@model EntityEquity.Areas.Insights.Pages.SalesModel
+@{
+    Layout = "_LayoutInsight";
+}
+
+<table id="salesTable">
+    <thead>
+        <tr>
+            <th>Invoice ID</th>
+            <th>Invoice Date</th>
+            <th>Invoice Item ID</th>
+            <th>Invoice Item Name</th>
+            <th>Quantity</th>
+            <th>Invoice Item Cost</th>
+            <th>Invoice Item Price</th>
+            <th>Invoice Item Profit</th>
+            <th>Invoice Item Profit Margin</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach(var item in Model.Items)
+        {
+            <tr>
+                <td>@item.Invoice.InvoiceId</td>
+                <td>@item.Invoice.ProcessedAt</td>
+                <td>@item.InvoiceItemId</td>
+                <td>@item.Name</td>
+                <td>@item.Quantity</td>
+                <td>$@(item.Cost * item.Quantity)</td>
+                <td>$@(item.Price * item.Quantity)</td>
+                <td>$@((item.Price-item.Cost) * item.Quantity)</td>
+                <td>@(((item.Price - item.Cost) / item.Price) * 100)%</td>
+            </tr>   
+        }
+    </tbody>
+</table>
+
+<script>
+    window.onload = function() {
+        $(document).ready(()=>
+        {
+            $('#salesTable').DataTable();
+        });
+    }
+</script>

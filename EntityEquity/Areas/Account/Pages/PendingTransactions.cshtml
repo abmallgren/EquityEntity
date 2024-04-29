@@ -1,0 +1,69 @@
+﻿@page "/account/pending"
+@using EntityEquity.Common
+@using EntityEquity.Components.Account
+@using EntityEquity.Components.Shared
+@using EntityEquity.Data
+
+@model EntityEquity.Areas.Account.Pages.PendingTransactionsModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Pending";
+}
+@(await Html.RenderComponentAsync(typeof(AccountTabs),RenderMode.ServerPrerendered, new { ActiveTab = AccountTabType.Pending }))
+<div class="flex-wrap-page" style="background-color:white">
+    <div class="action-panel" style="height:fit-content">
+        <h2 class="panel-section-title">Filter</h2>
+        <form id="filterForm" method="post">
+            <div class="action-panel-grid">
+                <span>Start</span><input asp-for="FilterStartDate" />
+                <span>End</span><input asp-for="FilterEndDate" />
+                <button style="grid-column-start:2" type="submit" asp-page-handler="Filters">Filter</button>
+            </div>
+            @Html.AntiForgeryToken()
+        </form>
+    </div>
+    <div>
+        <form method="post">
+        <table class="table-blue" style="margin-left: 15px;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Originator ID</th>
+                    <th>Status</th>
+                    <th>Amount</th>
+                    <th>Occurred At</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach(var transaction in Model.PendingTransactions)
+                {
+                    <tr>
+                        <td>
+                            @transaction.PendingTransactionId
+                        </td>
+                        <td>
+                            @transaction.OriginatorId
+                        </td>
+                        <td>
+                            @transaction.Status
+                        </td>
+                        <td>
+                            @transaction.Amount
+                        </td>
+                        <td>
+                            @transaction.OccurredAt.ToString()
+                        </td>
+                        <td>
+                        @{
+                            var buttonValue = "pending" + @transaction.PendingTransactionId;
+                        }
+                            <button asp-page-handler="PendingTable" type="submit" value="@buttonValue" name="Update">Update</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </form>
+    </div>
+</div>

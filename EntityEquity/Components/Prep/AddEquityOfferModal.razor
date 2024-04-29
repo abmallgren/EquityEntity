@@ -1,0 +1,77 @@
+﻿@using EntityEquity.Common
+@using EntityEquity.Hubs
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
+@inject IJSRuntime JS
+@inject IHubContext<EntityHub> HubContext
+@inject CookieBridgeConnection CookieBridgeConnection
+<EditForm OnValidSubmit="ValidSubmit" OnInvalidSubmit="Invalid" Model="@model">
+    <DataAnnotationsValidator />
+    
+    <div class="modal fade" id="addEquityOfferModal" tabindex="-1" aria-labelledby="addEquityOfferModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addEquityOfferModalLabel">Add an equity offer</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+                <div class="row">
+                    <Microsoft.AspNetCore.Components.Forms.ValidationSummary />
+                </div>
+                <div class="row">
+                    <label class="col-md-4">Number of Shares</label>
+                    <input id="addEquityOfferShares" class="col-md-8" type="number" @bind-value="model.Shares" />
+                </div>
+                <div class="row">
+                    <label class="col-md-4">Price (per share)</label>
+                    <input id="addEquityOfferPrice" class="col-md-8" type="text" @bind-value="model.Price" />
+                </div>
+                <div class="row">
+                    <label class="col-md-4">Must Purchase All</label>
+                    <input id="addEquityOfferPurchaseAll" class="col-md-8" type="checkbox" @bind-value="model.MustPurchaseAll" />
+                </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+</EditForm>
+@code {
+    [Parameter]
+    public string? Cookie { get; set; }
+    [Parameter]
+    public string Slug { get; set; }
+    private HubConnection? hubConnection;
+    public Models.PrepEquityModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = CookieBridgeConnection.GetHubConnection("/entityhub", Cookie!);
+
+        hubConnection.On("OnAddedEquityOffer", async () =>
+        {
+            await HubContext.Clients.All.SendAsync("UpdateEquityOffer");
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async void ValidSubmit()
+    {
+        if (hubConnection is not null)
+        {
+            model.PropertySlug = Slug;
+            await hubConnection.SendAsync("AddEquityOffer", model);
+        }
+        await JS.InvokeVoidAsync("HideModal", new object[1] { "#addEquityOfferModal" });
+    }
+
+    private void Invalid()
+    {
+        
+    }
+}

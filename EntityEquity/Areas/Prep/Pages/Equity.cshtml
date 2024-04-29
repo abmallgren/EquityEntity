@@ -1,0 +1,23 @@
+﻿@page "/prep/equity/{slug}"
+@using EntityEquity.Components.Prep
+@model EntityEquity.Areas.Prep.Pages.EquityModel
+@{
+    Layout = "_LayoutProp";
+    var cookie = HttpContext.Request.Cookies[".AspNetCore.Identity.Application"];
+}
+<div>
+    <div>@Model.Property.Name</div>
+    <div>Total Shares: @Model.Property.Shares</div>
+    <div>Shares Remaining: @Model.Balance</div> 
+    <div><a href="/prop/@Model.Property.Slug">Public Site</a></div>
+</div>
+@if (@Model.Balance > 0)
+{
+    <div>
+        <div>
+            <button type="button" data-bs-toggle="modal" data-bs-target="#addEquityOfferModal">Submit an offer</button>
+        </div>
+    </div>
+}
+
+@(await Html.RenderComponentAsync(typeof(AddEquityOfferModal), RenderMode.ServerPrerendered, new { Cookie = cookie, Model.Slug }))

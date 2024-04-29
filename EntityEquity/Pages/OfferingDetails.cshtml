@@ -1,0 +1,19 @@
+﻿@page "/OfferingDetails/{id}"
+@using EntityEquity.Components.External
+
+@model EntityEquity.Pages.OfferingDetailsModel
+@{
+    Layout = "_LayoutProp";
+    var cookie = HttpContext.Request.Cookies[".AspNetCore.Identity.Application"];
+}
+
+
+
+<div style="display:flex;flex-wrap:wrap">
+<div style="min-width:250px;width:calc(100% - 300px);">
+    @(await Html.RenderComponentAsync(typeof(OfferingDetails), RenderMode.ServerPrerendered, new {OfferingId = Model.OfferingId, Cookie = cookie }))
+</div>
+<div style="width:300px;">
+    @(await Html.RenderComponentAsync(typeof(BrowsingCart), RenderMode.ServerPrerendered, new { Cookie = cookie }))
+</div>
+</div>

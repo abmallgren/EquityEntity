@@ -1,0 +1,119 @@
+﻿@using AuthorizeNet.Api.Contracts.V1
+@using EntityEquity.Common
+@using EntityEquity.Common.Payment
+@using EntityEquity.Data
+@using EntityEquity.Data.Models.Deserialization.USBank
+@using EntityEquity.Extensions
+@using EntityEquity.Hubs
+@using EntityEquity.Models
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
+@inject IJSRuntime JS
+@inject IHubContext<EntityHub> HubContext
+@inject CookieBridgeConnection CookieBridgeConnection
+@inject IConfiguration configuration
+@inject AchTransaction achTransation
+<EditForm OnValidSubmit="ValidSubmit" OnInvalidSubmit="Invalid" Model="@model">
+    <DataAnnotationsValidator />
+    
+    <div class="modal fade" id="withdrawalModal" tabindex="-1" aria-labelledby="withdrawalModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="withdrawalModalLabel">Withdrawal</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+                <div class="row">
+                    <Microsoft.AspNetCore.Components.Forms.ValidationSummary />
+                </div>
+                <div style="color:red;">
+                    @error
+                </div>
+                <div class="row">
+                    <label for="withdrawalEntityType" class="col-md-4">Entity Type</label>
+                    <select id="withdrawalEntityType" class="col-md-8" @bind="model.EntityType">
+                        <option value="Individual">Individual</option>
+                        <option value="Business">Business</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <label for="withdrawalNameOnAccount" class="col-md-4">Name on Account</label>
+                    <input id="withdrawalNameOnAccount" class="col-md-8" type="text" @bind-value="model.NameOnAccount" />
+                </div>
+                <div class="row">
+                    <label for="withdrawalAccountType" class="col-md-4">Account Type</label>
+                    <select id="withdrawalAccountType" class="col-md-8" @bind="model.AccountType">
+                        <option value="Checking">
+                            Checking
+                        </option>
+                        <option value="Savings">
+                            Savings
+                        </option>
+                    </select>
+                </div>
+                <div class="row">
+                    <label for="withdrawalAccountNumber" class="col-md-4">Account Number</label>
+                    <input id="withdrawalAccountNumber" class="col-md-8" type="text" @bind-value="model.AccountNumber" />
+                </div>
+                <div class="row">
+                    <label for="withdrawalRoutingNumber" class="col-md-4">Routing Number</label>
+                    <input id="withdrawalRoutingNumber" class="col-md-8" type="text" @bind-value="model.RoutingNumber" />
+                </div>
+                <div class="row">
+                    <label for="withdrawalAmount" class="col-md-4">Amount</label>
+                    <input id="withdrawalAmount" class="col-md-8" type="text" @bind-value="model.Amount" />
+                </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+</EditForm>
+@code {
+    [Parameter]
+    public string? Cookie { get; set; }
+    private HubConnection? hubConnection;
+    private AchPaymentFormModel model = new();
+    private string error;
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = CookieBridgeConnection.GetHubConnection("/entityhub", Cookie!);
+        await hubConnection.StartAsync();
+        model.EntityType = "Individual";
+        model.AccountType = "Checking";
+    }
+    private async void ValidSubmit()
+    {
+        recipientDetails details = new()
+        {
+            RecipientType = model.EntityType,
+            RecipientName = model.NameOnAccount,
+            RecipientAccountType = model.AccountType,
+            RecipientAccountNumber = model.AccountNumber,
+            RecipientRoutingNumber = model.RoutingNumber,
+            RecipientIdentificationNumber = "1"
+        };
+        if (hubConnection is not null)
+        {
+            var result = await hubConnection.InvokeAsync<UsBankAchApiResponse>("AchWithdrawal", details, model.Amount);
+            HubContext.Clients.All.SendAsync("UpdateBalance");
+            await JS.InvokeVoidAsync("HideModal", new object[1] { "#withdrawalModal" });
+            if (result.TransactionStatus == "REQUEST_RECEIVED")
+            {
+                await JS.InvokeVoidAsync("ShowInformationModal", new object[1] 
+                { 
+                    $"<div>The transaction is in progress. Your transaction ID is {result.TransactionID}.</div>" 
+                });
+            }
+        }
+
+    }
+    private void Invalid()
+    {
+        
+    }
+}

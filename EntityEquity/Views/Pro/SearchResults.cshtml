@@ -1,0 +1,30 @@
+﻿@using EntityEquity.Components.External
+@using EntityEquity.Data
+@using EntityEquity.Models.External
+@model EntityEquity.Models.External.SearchResultsModel
+@{
+    Layout = "_LayoutProp";
+    ViewData["Title"] = "Search Results";
+}
+<div class="text-center">
+    <h1 class="display-4">Search</h1>
+    <form method="get" asp-action="SearchResults">
+        <input type="text" id="searchPhrase" name="searchPhrase" /><button type="submit">Search</button>
+    </form>
+</div>
+
+@if (Model.Cookie is not null)
+{
+<div style="display:flex;flex-wrap:wrap">
+<div style="display:flex;flex-wrap:wrap;min-width:250px;width:calc(100% - 300px);">
+    @(await Html.RenderComponentAsync(typeof(PropOfferings), RenderMode.ServerPrerendered, new { Cookie = Model.Cookie, SearchPhrase = Model.SearchPhrase }))
+</div>
+<div style="width:300px;">
+    @(await Html.RenderComponentAsync(typeof(BrowsingCart), RenderMode.ServerPrerendered, new { Cookie = Model.Cookie }))
+</div>
+</div>
+}
+else
+{
+    <div>Please register/login to view this property.</div>
+}

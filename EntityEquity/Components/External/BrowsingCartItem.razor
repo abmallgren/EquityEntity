@@ -1,0 +1,27 @@
+﻿@using EntityEquity.Data
+@using EntityEquity.Data.Models
+@using System.Globalization
+<div>
+    <div>
+    @Offering.Offering.Name
+    </div>
+    <div style="margin-left:35px; display:flex; justify-content: space-between;">
+        <div>
+            @@ (@Offering.Offering.Price.ToString("C", CultureInfo.CreateSpecificCulture("en-US")) X @Offering.OrderItem.Quantity)
+        </div>
+        <div>
+            @((Offering.Offering.Price*Offering.OrderItem.Quantity).ToString("C", CultureInfo.CreateSpecificCulture("en-US")))
+        </div>
+    </div>
+    <div style="text-align:right;">
+        <OrderQuantity Offering=@Offering Cookie=@Cookie />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Cookie { get; set; }
+    [Parameter]
+    public OfferingWithOrderItem Offering { get; set; }
+
+}

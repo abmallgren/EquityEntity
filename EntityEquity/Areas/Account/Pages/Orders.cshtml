@@ -1,0 +1,61 @@
+﻿@page "/account/orders"
+@using EntityEquity.Common
+@using EntityEquity.Components.Account
+@model EntityEquity.Areas.Account.Pages.OrdersModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Orders";
+}
+@(await Html.RenderComponentAsync(typeof(AccountTabs), RenderMode.ServerPrerendered, new { ActiveTab = AccountTabType.Orders }))
+
+<div class="flex-wrap-page" style="background-color:white">
+    <div class="action-panel" style="height:fit-content">
+        <h2 class="panel-section-title">Filter</h2>
+        <form id="filterForm" method="post">
+            <div class="action-panel-grid">
+                <span>Start</span><input asp-for="FilterStartDate" />
+                <span>End</span><input asp-for="FilterEndDate" />
+                <button style="grid-column-start:2" type="submit">Filter</button>
+            </div>
+            @Html.AntiForgeryToken()
+        </form>
+    </div>
+    <div>
+        <table class="table-blue" style="margin-left: 15px;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Purchased From</th>
+                    <th>Amount</th>
+                    <th>Occurred At</th>
+                    <th>View</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach(var orderWithInvoices in Model.OrdersWithInvoices)
+                {
+                    @foreach(var invoiceWithSum in orderWithInvoices.Invoices)
+                    {
+                        <tr>
+                            <td>
+                                @invoiceWithSum.Invoice.InvoiceId
+                            </td>
+                            <td>
+                                <a href="~/prop/@invoiceWithSum.Invoice.Property.Slug">@invoiceWithSum.Invoice.Property.Name</a>
+                            </td>
+                            <td>
+                                $@invoiceWithSum.Amount
+                            </td>
+                            <td>
+                                @invoiceWithSum.Invoice.ProcessedAt.ToString()
+                            </td>
+                            <td>
+                                <a href="~/account/order/@orderWithInvoices.Order.OrderId" target="_blank">View</a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

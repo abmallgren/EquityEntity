@@ -1,0 +1,130 @@
+﻿@using EntityEquity.Common
+@using EntityEquity.Data
+@using EntityEquity.Hubs
+@using EntityEquity.Models
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Net
+@inject IJSRuntime JS
+@inject IHubContext<EntityHub> HubContext
+@inject NavigationManager Navigation
+@inject CookieBridge CookieBridge
+@inject CookieBridgeConnection CookieBridgeConnection
+@implements IAsyncDisposable
+
+
+<EditForm OnValidSubmit="ValidSubmit" OnInvalidSubmit="Invalid" Model="@model">
+    <DataAnnotationsValidator />
+    
+    <div class="modal fade" id="addPropertyModal" tabindex="-1" aria-labelledby="addPropertyModalLabel" aria-hidden="true">
+      <div class="modal-dialog" style="max-width:650px;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addPropertyModalLabel">Add property</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+                <div class="row" aria-live="polite">
+                    <Microsoft.AspNetCore.Components.Forms.ValidationSummary />
+                    <span style="color:red;">@error</span>
+                </div>
+                <div class="row">
+                    <label for="addPropertySlug" class="col-md-4">Url Slug</label>
+                    <input id="addPropertySlug" class="col-md-8" type="text" @bind-value="model.Slug" />
+                </div>
+                <div class="row">
+                    <label for="addPropertyName" class="col-md-4">Name</label>
+                    <input id="addPropertyName" class="col-md-8" type="text" @bind-value="model.Name" />
+                </div>
+                <div class="row">
+                    @{
+                        string notificationEmailAddressTitle = "The email address notifications are sent to (e.g. new orders, customer inquiries, et cetera).";
+                    }
+                    <label for="addPropertyNotificationEmailAddress" class="col-md-4" title="@notificationEmailAddressTitle">Notification Email Address</label>
+                    <input id="addPropertyNotificationEmailAddress" class="col-md-8" type="text" title="@notificationEmailAddressTitle" @bind-value="model.NotificationEmailAddress" />
+                </div>
+                <div class="row">
+                    @{
+                        string sharesTitle = "Number of shares that can be sold. Profits from sales will be distributed according to the number of shares that are held. Enter 1 if you do not want to sell shares in the future.";
+                    }
+                    <label for="addPropertyShares" class="col-md-4" title="@sharesTitle">Shares</label>
+                    <input id="addPropertyShares" class="col-md-8" type="text" title="@sharesTitle" @bind-value="model.Shares" />
+                </div>
+                <div class="row">
+                        @{
+                            string equityOffersTitle = "Allow people to send offers to purchase equity in your property.";
+                        }
+                        <label for="addPropertyEquityOffers" class="col-md-4" title="@equityOffersTitle">Equity Offers</label>
+                    <input id="addPropertyEquityOffers" class="col-md-8" type="checkbox" title="@equityOffersTitle" @bind-value="model.EquityOffers" />
+                </div>
+                <div class="row">
+                        @{
+                            string publicInsightsTitle = "Allow the public to view product catalog, sales, margins, etc.";
+                        }
+                        <label for="addPropertyPublicInsights" class="col-md-4" title="@publicInsightsTitle">Public Insights</label>
+                    <input id="addPropertyPublicInsights" class="col-md-8" type="checkbox" title="@publicInsightsTitle" @bind-value="model.PublicInsights" />
+                </div>
+                <div class="row" style=" margin-top:10px;width:100%">
+                    <span style="text-align:center;">Hover over the fields to view additional information.</span>
+                </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+</EditForm>
+@code {
+    [Parameter]
+    public string? Cookie { get; set; }
+
+    private HubConnection? hubConnection;
+    private PropertyModel model = new();
+    public string error = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = CookieBridgeConnection.GetHubConnection("/entityhub", Cookie!);
+
+        hubConnection.On("OnAddedProperty", async () =>
+        {
+            await HubContext.Clients.All.SendAsync("UpdateProperties");
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async void ValidSubmit()
+    {
+        if (hubConnection is not null)
+        {
+            Result result = await hubConnection.InvokeAsync<Result>("AddProperty", model);
+            if (!result.Successful)
+            {
+                error = result.Message;
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("HideModal", new object[1] { "#addPropertyModal" });
+                model = new();
+                error = "";
+            }
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void Invalid()
+    {
+        
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

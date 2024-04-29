@@ -1,0 +1,95 @@
+﻿@using EntityEquity.Common
+@using EntityEquity.Data
+@using EntityEquity.Hubs
+@using EntityEquity.Models
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
+@inject CookieBridgeConnection CookieBridgeConnection
+@inject NavigationManager Navigation
+<EditForm Model="@model" OnValidSubmit="ValidSubmit">
+    <DataAnnotationsValidator />
+    
+    <div class="modal fade" id="shippingFormModal" tabindex="-1" aria-labelledby="shippingFormModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="shippingFormModalLabel">Shipping address</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <Microsoft.AspNetCore.Components.Forms.ValidationSummary />
+                    </div>
+                    <div style="text-align:center;font-size:1rem;">
+                        Shipping Address
+                    </div>
+                    <div class="row">
+                        <label for="shippingSameAsBillingCheck" class="col-md-4">Same As Billing</label>
+                        <input id="shippingSameAsBillingCheck" type="checkbox" class="col-md-8" @onchange="OnChangeBillingSame" />
+                    </div>
+                    <div class="row">
+                        <label for="shippingNameText" class="col-md-4">Name</label>
+                        <input id="shippingNameText" class="col-md-8" @bind-value="model.Name" disabled=@DisableShippingAddressFields />
+                    </div>
+                    <div class="row">
+                        <label for="shippingStreetAddressText" class="col-md-4">Street Address</label>
+                        <input id="shippingStreetAddressText" class="col-md-8" @bind-value="model.StreetAddress" disabled=@DisableShippingAddressFields />
+                    </div>
+                    <div class="row">
+                        <label for="shippingCityText" class="col-md-4">City</label>
+                        <input id="shippingCityText" class="col-md-8" @bind-value="model.City" disabled=@DisableShippingAddressFields />
+                    </div>
+                    <div class="row">
+                        <label for="shippingZipCodeText" class="col-md-4">ZIP Code</label>
+                        <input id="shippingZipCodeText" class="col-md-8" @bind-value="model.ZipCode" disabled=@DisableShippingAddressFields />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+@code {
+    [Parameter]
+    public string? Cookie { get; set; }
+    [Parameter]
+    public Order Order { get; set;  }
+    private HubConnection? hubConnection;
+    private ShippingAddressModel model = new();
+    private bool UseSameAddressAsBilling = false;
+    private bool DisableShippingAddressFields = false;
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = CookieBridgeConnection.GetHubConnection("/entityhub", Cookie!);
+        await hubConnection.StartAsync();
+    }
+    public async void ValidSubmit()
+    {
+        ShippingAddress address = new()
+        {
+            SameAsBillingAddress = model.SameAsBillingAddress,
+            Name = model.Name,
+            StreetAddress = model.StreetAddress,
+            City = model.City,
+            ZipCode = model.ZipCode
+        };
+        if (hubConnection is not null)
+        {
+            await hubConnection.InvokeAsync("SaveShippingAddress", Order, address);
+            Navigation.NavigateTo("/account/orders", true);
+        }
+    }
+    private async Task OnChangeBillingSame(ChangeEventArgs e)
+    {
+        DisableShippingAddressFields = false;
+        model.SameAsBillingAddress = (bool)e.Value;
+        if (model.SameAsBillingAddress)
+        {
+            DisableShippingAddressFields = true;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+}

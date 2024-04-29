@@ -1,0 +1,32 @@
+﻿@page "/Equity"
+@model EntityEquity.Pages.EquityModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Equity Manager";
+}
+
+<div class="flex-tile-band">
+   @{
+    var netEquity = Model.NetEquity;
+    @foreach(var nEquity in netEquity)
+    {
+        <div class="tile">
+            <div class="tile-title">
+                @nEquity.Property.Name
+            </div>
+            <div>
+                Total Shares: @nEquity.Property.Shares
+            </div>
+            <div>
+                Remaining Shares: @nEquity.NetShares
+            </div>
+            <div>
+                @if (nEquity.NetShares > 0)
+                {
+                     <a href="/prep/equity/@nEquity.Property.Slug">Offer Equity</a>
+                }
+            </div>
+        </div>
+    }
+} 
+</div>

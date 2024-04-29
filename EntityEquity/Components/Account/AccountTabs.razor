@@ -1,0 +1,28 @@
+﻿@using EntityEquity.Common
+@inject NavigationManager Navigation
+<div class="tabContainer" style="display:flex">
+    @foreach(var tab in tabs)
+    {
+        <div class="@tab.CssClass" @onclick="() => Navigation.NavigateTo(tab.Link, true)">
+            @tab.Content
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public AccountTabType ActiveTab { get; set; }
+    public class Tab
+    {
+        public string Content { get; set; }
+        public string Link { get; set; }
+        public string CssClass { get; set; }
+    }
+    List<Tab> tabs = new();
+    protected override void OnInitialized()
+    {
+        tabs.Add(new() { Content = "Ledger", Link = "/account/ledger", CssClass = ActiveTab == AccountTabType.Ledger ? "active" : "" });
+        tabs.Add(new() { Content = "Pending", Link = "/account/pending", CssClass = ActiveTab == AccountTabType.Pending ? "active" : "" });
+        tabs.Add(new() { Content = "Orders", Link = "/account/orders", CssClass = ActiveTab == AccountTabType.Orders ? "active" : "" });
+    }
+}

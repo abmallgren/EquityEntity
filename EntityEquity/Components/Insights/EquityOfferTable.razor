@@ -1,0 +1,64 @@
+﻿@using Common
+@using Data.CommonDataSets
+@using EntityEquity.Models
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
+@inject IJSRuntime JS
+@inject CookieBridgeConnection cookieBridgeConnection
+<form>
+    <table id="liveOfferTable">
+        <thead>
+            <tr>
+                <th>Offer Number</th>
+                <th>Shares</th>
+                <th>Price (per share)</th>
+                <th>Total Price</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach(var liveOffer in model)
+            {
+                <tr>
+                    <td>@liveOffer.LiveOfferId</td>
+                    <td>@liveOffer.Shares</td>
+                    <td>$@liveOffer.Price.ToString("N")</td>
+                    <td>$@((liveOffer.Shares * liveOffer.Price).ToString("N"))</td>
+                    <td>
+                        <button @onclick="() => BuyAllSharesOnClick(liveOffer.LiveOfferId)" style="margin-right:10px;">Buy All Shares</button>
+                        @if (!@liveOffer.MustPurchaseAll && liveOffer.Shares > 1)
+                        {
+                            <button type="submit">Place Partial Order</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</form>
+
+@code {
+    [Parameter]
+    public string Cookie { get; set; }
+    [Parameter]
+    public string Slug { get; set; }
+    private List<LiveOffer> model = new List<LiveOffer>();
+    private HubConnection hubConnection;
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = cookieBridgeConnection.GetHubConnection("/entityhub", Cookie);
+        await hubConnection.StartAsync();
+        model = await hubConnection.InvokeAsync<List<LiveOffer>>("GetLiveEquityOffers", Slug);
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            await JS.InvokeVoidAsync("ApplyDataTable", new object[1] { "#liveOfferTable" });
+        }
+    }
+    private void BuyAllSharesOnClick(int liveOfferId)
+    {
+        hubConnection.InvokeAsync("BuyAllEquityForOrder", liveOfferId);
+    }
+}

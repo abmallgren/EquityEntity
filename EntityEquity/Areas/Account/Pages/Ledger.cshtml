@@ -1,0 +1,72 @@
+﻿@page "/account/ledger"
+@using EntityEquity.Common
+@using EntityEquity.Components.Account
+@using EntityEquity.Components.Shared
+@model EntityEquity.Areas.Account.Pages.LedgerModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Account";
+}
+@(await Html.RenderComponentAsync(typeof(AccountTabs),RenderMode.ServerPrerendered, new { ActiveTab = AccountTabType.Ledger }))
+<div class="flex-wrap-page" style="background-color:white">
+    <div class="action-panel" style="height:fit-content">
+        <h2 class="panel-section-title">Account Information</h2>
+        <div>
+            Balance: $@Model.Balance
+        </div>
+        <h2 class="panel-section-title">Filter</h2>
+                
+                <form id="filterForm" method="post">
+                    <div class="action-panel-grid">
+                        <span>Start</span><input asp-for="FilterStartDate" />
+                        <span>End</span><input asp-for="FilterEndDate" />
+                        <button style="grid-column-start:2" type="submit">Filter</button>
+                    </div>
+                    @Html.AntiForgeryToken()
+                </form>
+            
+         <h2 class="panel-section-title">Actions</h2>
+        <div class="action-panel-button">
+            <div class="action-panel-button">
+                <button type="button" data-bs-toggle="modal" data-bs-target="#depositModal">Deposit</button>
+            </div>
+            <div class="action-panel-button">
+                <button type="button" data-bs-toggle="modal" data-bs-target="#withdrawalModal">Withdrawal</button>
+            </div>
+        </div>
+    </div>
+    <div>
+        <table class="table-blue" style="margin-left: 15px;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Occurred At</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach(var ledgerEntry in Model.LedgerEntries)
+                {
+                    <tr>
+                        <td>
+                            @ledgerEntry.LedgerEntryId
+                        </td>
+                        <td>
+                            @ledgerEntry.Description
+                        </td>
+                        <td>
+                            @ledgerEntry.Amount
+                        </td>
+                        <td>
+                            @ledgerEntry.OccurredAt.ToString()
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+@(await Html.RenderComponentAsync(typeof(WithdrawalModal), RenderMode.ServerPrerendered, new { Cookie = Model.Cookie }))
+@(await Html.RenderComponentAsync(typeof(DepositModal), RenderMode.ServerPrerendered, new { Cookie = Model.Cookie }))
+@(await Html.RenderComponentAsync(typeof(InformationModal), RenderMode.ServerPrerendered, new {}))

@@ -1,0 +1,20 @@
+﻿@page "/Property" 
+@model EntityEquity.Pages.PropertyIndexModel
+@using EntityEquity.Components
+@using Microsoft.AspNetCore.Identity
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Property Manager";
+}
+@{
+    var cookie = HttpContext.Request.Cookies[".AspNetCore.Identity.Application"];
+}
+<div class="row">
+    <div style="position: relative; width:100%;" >
+        <div id="propertyListContent">
+            @(await Html.RenderComponentAsync(typeof(PropertiesListLarge), RenderMode.ServerPrerendered, new { Cookie = cookie }))
+        </div>
+    </div>
+</div>
+
+@(await Html.RenderComponentAsync(typeof(AddPropertyModal), RenderMode.ServerPrerendered, new { Cookie = cookie }))

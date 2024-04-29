@@ -1,0 +1,57 @@
+﻿@using EntityEquity.Common
+@using EntityEquity.Components.Shared
+@using EntityEquity.Data
+@using Microsoft.AspNetCore.SignalR.Client
+@inject CookieBridgeConnection CookieBridgeConnection
+
+<PropertyTabs ActiveTab="PropertyTabs.PropertyTabType.Property"></PropertyTabs>
+<div class="flex-wrap-page">
+    <div class="action-panel">
+        <h2 class="panel-section-title">Actions</h2>
+        <div class="action-panel-button">
+            <button type="button" data-bs-toggle="modal" data-bs-target="#addPropertyModal">Add A Property</button>
+        </div>
+    </div>
+    <div style="display:flex; flex-wrap:wrap;">
+        @if (Properties is not null)
+        {
+            foreach(Property property in Properties)
+            {
+                <div class="tile">
+                    <div class="name">@property.Name</div>
+                    <div>Slug: @property.Slug</div>
+                    <div><a href="/prep/equity/@property.Slug">Offer Equity</a></div>
+                    <button type="button" onclick="@(() => OnClickDeactivateProperty(property.PropertyId))" class="deactivate">Deactivate</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private List<Property>? Properties { get; set; }
+    [Parameter]
+    public string? Cookie { get; set; }
+
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = CookieBridgeConnection.GetHubConnection("/entityhub", Cookie!);
+        hubConnection.On("UpdateProperties", async () =>
+        {
+            Properties = await hubConnection.InvokeAsync<List<Property>>("GetProperties");
+            await InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+        Properties = await hubConnection.InvokeAsync<List<Property>>("GetProperties");
+        await InvokeAsync(StateHasChanged);
+    }
+    private async Task OnClickDeactivateProperty(int propertyId)
+    {
+        await hubConnection.InvokeAsync("DeactivateProperty", propertyId);
+        Properties = await hubConnection.InvokeAsync<List<Property>>("GetProperties");
+        await InvokeAsync(StateHasChanged);
+    }
+}

@@ -1,0 +1,66 @@
+﻿@using Common
+@using Data
+@using EntityEquity.Data.Models;
+@using Newtonsoft.Json
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
+@inject CookieBridgeConnection CookieBridgeConnection
+@inject IHttpClientFactory HttpClientFactory
+@if (Offerings is not null)
+{
+    foreach (OfferingWithOrderItem offering in Offerings)
+    {
+        bool renderedOnPropertPage = false;
+        if (Property is not null)
+        {
+            renderedOnPropertPage = true;
+        }
+        <PropOffering RenderedOnPropertyPage=@renderedOnPropertPage Offering=@offering Cookie=@Cookie></PropOffering>
+    }
+}
+
+@code {
+    [Parameter]
+    public string Cookie { get; set; }
+    [Parameter]
+    public Property Property { get; set; }
+    [Parameter]
+    public string SearchPhrase { get; set; }
+    private List<OfferingWithOrderItem> Offerings { get; set; }
+    private HubConnection? hubConnection;
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = CookieBridgeConnection.GetHubConnection("/entityhub", Cookie!);
+
+        hubConnection.On("UpdateOrders", async () =>
+        {
+            await UpdateOfferings();
+        });
+        await hubConnection.StartAsync();
+
+        await UpdateOfferings();
+    }
+    private async Task UpdateOfferings()
+    {
+
+        string offerQueryAddress = "";
+        if (Property is not null)
+        {
+            offerQueryAddress = $"api/PropOffering?propertyId={Property.PropertyId}";
+        }
+        else if (Property is null && !String.IsNullOrEmpty(SearchPhrase))
+        {
+            offerQueryAddress = $"api/PropOffering?searchPhrase={SearchPhrase}";
+        }
+        else
+        {
+            throw new Exception("Property does not exist.");
+        }
+
+        HttpClient httpClient = CookieBridgeConnection.GetHttpClient(Cookie!);
+        var response = await httpClient.GetStringAsync(offerQueryAddress);
+        Offerings = JsonConvert.DeserializeObject<List<OfferingWithOrderItem>>(response)!;
+
+        await InvokeAsync(StateHasChanged);
+    }
+}

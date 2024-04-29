@@ -1,0 +1,40 @@
+﻿.prop-offering {
+    margin: 10px;
+    max-width: 250px;
+}
+
+    .prop-offering input {
+        text-align: center;
+        width: 100px;
+    }
+.offering-panel-offering {
+    margin-right: 15px;
+    margin-top: 10px;
+    max-width: 627px;
+}
+
+.offering-panel-image-container {
+    height: 200px;
+    min-width: 250px;
+}
+
+.offering-panel-image {
+    width: 250px;
+    height: 200px;
+}
+
+.no-image {
+    background-color: lightgray;
+    margin: auto;
+    text-align: center;
+    padding: 85px 0px;
+    font-size: 20px;
+    min-width:250px
+}
+.prop-item-image {
+    width: 250px;
+    height: 200px;
+}
+.word-break {
+    word-wrap:break-word;
+}

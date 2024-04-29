@@ -1,0 +1,171 @@
+﻿@using AuthorizeNet.Api.Contracts.V1;
+@using EntityEquity.Common
+@using EntityEquity.Common.Payment
+@using EntityEquity.Data
+@using EntityEquity.Hubs
+@using EntityEquity.Models
+@using EntityEquity.Models.Mapping
+@using EntityEquity.Services
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Net
+@using System.Security.Claims
+@inject CookieBridgeConnection CookieBridgeConnection
+@inject EmailService EmailService
+@inject IHttpContextAccessor HttpContext
+@inject IHubContext<EntityHub> HubContext
+@inject IJSRuntime JS
+@inject ILogger<PaymentFormModal> Logger
+
+    <div>
+        <input type="radio" name="paymentType"  value="Card" />
+        <input type="radio" name="paymentType" value="RTP" />
+        <input type="radio" name="paymentType" value="ACH" />
+    </div>
+<EditForm Model="@ccModel" OnValidSubmit="ValidCCSubmit" OnInvalidSubmit="InvalidCC">
+    <div class="modal fade" id="paymentFormModal" tabindex="-1" aria-labelledby="paymentFormModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="paymentFormModalLabel">Process payment</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div style="text-align:center;font-size:1rem;">
+                Payment Information
+            </div>
+            <div style="color:red;">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <span>@errorMessage</span>
+            </div>
+            <div class="row">
+                <label for="paymentInformationFirstNameText" class="col-md-4">First Name</label>
+                <input id="paymentInformationFirstNameText" class="col-md-8" @bind-value="ccModel.BillingFirstName" />
+            </div>
+            <div class="row">
+                <label for="paymentInformationLastNameText" class="col-md-4">Last Name</label>
+                <input id="paymentInformationLastNameText" class="col-md-8" @bind-value="ccModel.BillingLastName" />
+            </div>
+            <div class="row">
+                <label for="paymentInformationCardNumberText" class="col-md-4">Card Number</label>
+                <input id="paymentInformationCardNumberText" class="col-md-8" @bind-value="ccModel.CreditCardNumber" />
+            </div>
+            <div class="row">
+                <label for="paymentInformationExpirationDateText" class="col-md-4">Expiration Date</label>
+                <input id="paymentInformationExpirationDateText" maxlength="4" placeholder="MMYY" class="col-md-8" @bind-value="ccModel.CreditCardExpirationDate" />
+            </div>
+            <div class="row">
+                <label for="paymentInformationSecurityCodeText" class="col-md-4">Security Code</label>
+                <input id="paymentInformationSecurityCodeText" class="col-md-8" @bind-value="ccModel.CreditCardSecurityCode" />
+            </div>
+            <div style="text-align:center;font-size:1rem;">
+                Billing Address
+            </div>
+            <div class="row">
+                <label for="paymentInformationBillingAddressLine1Text" class="col-md-4">Address</label>
+                <input id="paymentInformationBillingAddressLine1Text" class="col-md-8" @bind-value="ccModel.BillingAddress" />
+            </div>
+            <div class="row">
+                <label for="paymentInformationBillingCityText" class="col-md-4">City</label>
+                <input id="paymentInformationBillingCityText" class="col-md-8" @bind-value="ccModel.BillingCity" />
+            </div>
+            <div class="row">
+                <label for="paymentInformationBillingZipCodeText" class="col-md-4">ZIP Code</label>
+                <input id="paymentInformationBillingZipCodeText" class="col-md-8" @bind-value="ccModel.BillingZipCode" />
+            </div>
+            </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">Submit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    </EditForm>
+<ShippingFormModal Cookie="@Cookie" Order="@order"></ShippingFormModal>
+
+@code {
+    [Parameter]
+    public string? Cookie { get; set; }
+    private HubConnection? hubConnection;
+    public CreditCardPaymentFormModel ccModel = new();
+    private string errorMessage = "";
+    private Order? order = null;
+    private PaymentMethod paymentMethod;
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = CookieBridgeConnection.GetHubConnection("/entityhub", Cookie!);
+
+        hubConnection.On("OnFinalizedOrder", async () =>
+        {
+            await HubContext.Clients.All.SendAsync("FinalizeOrder");
+            await HubContext.Clients.All.SendAsync("UpdateOrders");
+        });
+
+        await hubConnection.StartAsync();
+        paymentMethod = await hubConnection.InvokeAsync<PaymentMethod>("GetPaymentMethod");
+    }
+    public async void ValidCCSubmit()
+    {
+        List<lineItemType> lineItems = new();
+
+        if (hubConnection is not null)
+        {
+            lineItems = await hubConnection.InvokeAsync<List<lineItemType>>("GetLineItems");
+        }
+        var total = lineItems.Sum<lineItemType>(i => (i.unitPrice * i.quantity));
+        CreditCardPaymentParameters parameters = PaymentForms.MapCreditCard(ccModel,lineItems, total);
+        if (hubConnection is not null)
+        {
+            var finalizeOrderResult = await hubConnection.InvokeAsync<FinalizeOrderReturnModel>("FinalizeCreditCardOrder", parameters);
+            if (!finalizeOrderResult.Result.Successful)
+            {
+                errorMessage = finalizeOrderResult.Result.Error.ErrorCode + finalizeOrderResult.Result.Error.ErrorMessage;
+            }
+            else
+            {
+                // Send a receipt to the purchaser.
+                await SendReceipt(finalizeOrderResult.Order.OrderId);
+                // Send a notice to the property owner.
+                await SendNotices(finalizeOrderResult.Order.OrderId, finalizeOrderResult.EmailAddresses);
+                if (finalizeOrderResult.PaidMustShip)
+                {
+                    await JS.InvokeVoidAsync("HideModal", "#paymentFormModal");
+                    await JS.InvokeVoidAsync("ShowModal", "#shippingFormModal");
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("HideModal", "#paymentFormModal");
+                }
+            }
+            order = finalizeOrderResult.Order;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+    public async Task SendReceipt(int orderId)
+    {
+        string toEmailAddress = HttpContext.HttpContext.User.FindFirst(ClaimTypes.Email).Value;
+        HttpClient httpClient = CookieBridgeConnection.GetHttpClient(Cookie);
+        string html = await httpClient.GetStringAsync($"account/order/{orderId}");
+        await EmailService.SendNews(toEmailAddress, $"Equity Entity - Purchase Confirmation - Order #{orderId}", html);
+    }
+    public async Task SendNotices(int orderId, List<string> emailAddresses)
+    {
+        HttpClient httpClient = CookieBridgeConnection.GetHttpClient(Cookie);
+        foreach(var emailAddress in emailAddresses)
+        {
+            var encodedEmailAddress = WebUtility.UrlEncode(emailAddress);
+            string html = await httpClient.GetStringAsync($"fulfillment/notification/order/{orderId}/{encodedEmailAddress}");
+            await EmailService.SendNews(emailAddress, $"Equity Entity - Purchase Notification - Order #{orderId}", html);
+        }
+    }
+    public async void InvalidCC()
+    {
+        Logger.LogInformation("Invalid credit Card information.");
+    }
+    public async void ValidECSubmit()
+    {
+        
+    }
+}

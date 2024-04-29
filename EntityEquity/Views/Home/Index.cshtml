@@ -1,0 +1,77 @@
+﻿@using EntityEquity.Components
+@using EntityEquity.Models
+@using System.Globalization
+@model HomeIndexModel
+@{
+    ViewData["Title"] = "Home Page";
+}
+<div class="text-center" style="margin: 15px 0px 35px; 0px;">
+    <h2 class="display-4">Welcome</h2>
+    <p>Build properties, build equity, with Equity Entity.</p>
+    @if (!User.Identity.IsAuthenticated)
+    {
+            <span>Please register and/or login.</span>
+    }
+</div>
+@{
+    
+    if (User.Identity.IsAuthenticated)
+    {
+        if (Model.Performances.Count == 0)
+        {
+            <div style="max-width: 400px;text-align:left; margin:auto; margin-top:30px;">
+                You don't have any properties setup. To get started:
+                <ul>
+                    <li>Setup an <a href="~/Inventory">inventory</a>
+                        <ul>
+                            <li>Add an inventory</li>
+                            <li>Add an item to an inventory</li>
+                        </ul>
+                    </li>
+                    <li>
+                        Setup a <a href="~/Property">property</a>
+                        <ul>
+                            <li>In some cases, a property is like a storefront. In other cases, an R&D venture.</li>
+                        </ul>
+                    </li>
+                    <li>
+                        Create an <a href="~/Offerings">offering</a>
+                        <ul>
+                            <li>An offering is a presentation of an inventory item in a property.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        }
+        else
+        {
+            <h2 class="text-center" style="background-color:var(--dark-blue); color:white;font-weight: normal;margin-bottom:30px;padding: 10px 0px 15px 0px;">Properties (At a Glance)</h2>
+
+            <div class="flex-tile-band">
+                @foreach (var performance in Model.Performances)
+                {
+                    <div class="tile">
+                        <div class="tile-title">
+                            @performance.Property.Name (#@performance.Property.PropertyId)
+                        </div>
+                        <div>
+                            Total # of Shares: @performance.Property.Shares.ToString("N0")
+                        </div>
+                        <div>
+                            Total Shares Owned: @performance.SharesOwned.ToString("N0")
+                        </div>
+                        <div>
+                            
+                        </div>
+                        <div>
+                            Sales in past week: @performance.SalesInLastWeek.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+}
+
+
+ 

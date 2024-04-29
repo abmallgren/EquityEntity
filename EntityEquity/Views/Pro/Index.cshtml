@@ -1,0 +1,22 @@
+﻿@using EntityEquity.Components
+@using EntityEquity.Components.External
+@using EntityEquity.Data
+@using EntityEquity.Models.External
+@model SearchResultsModel
+@{
+    ViewData["Title"] = "Search";
+    Layout = "_LayoutProp";
+}
+<div class="text-center">
+    <h1 class="display-4">Search</h1>
+    <form method="get" asp-action="SearchResults">
+        <input type="text" id="searchPhrase" name="searchPhrase" /><button type="submit">Search</button>
+    </form>
+</div>
+
+@if (Model.Cookie is null)
+{
+    <div>Please register/login to search.</div>
+}
+
+

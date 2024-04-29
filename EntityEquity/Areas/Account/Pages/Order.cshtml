@@ -1,0 +1,45 @@
+﻿@page "/account/order/{id}"
+@using System.Globalization
+@model EntityEquity.Areas.Account.Pages.OrderModel
+@{
+}
+
+@if (@Model.OrderWithInvoiceItems is not null)
+{
+<div>
+    <div style="margin-top:25px;">
+        This is confirmation of your order through one or more properties hosted on <a href="@Model.BaseAddress" target="_blank">Equity Entity</a>. 
+        Below you will see an account of your purchase(s), sorted by properties. 
+        Please note you will only see one property if you purchased from only one property.
+    </div>
+    <div style="margin-top: 25px; text-align:center">
+        @{
+            decimal total = 0;
+        }
+        @foreach(var invoice in @Model.OrderWithInvoiceItems.InvoicesWithInvoiceItems)
+        {
+            decimal propertyTotal = 0;
+            <div style="margin-bottom:5px;"><a href="@Model.BaseAddress.TrimEnd('/')/prop/@invoice.Invoice.Property.Slug" style="font-size:1.3rem;">@invoice.Invoice.Property.Name</a></div> 
+            <div>
+                @foreach(var invoiceItem in @invoice.InvoiceItems)
+                {
+                    propertyTotal += invoiceItem.Quantity * invoiceItem.Price;
+                    <div>
+                        @invoiceItem.Name
+                    </div>
+                    <div style="margin-bottom:5px;">
+                        @invoiceItem.Quantity @@ @invoiceItem.Price.ToString("C", CultureInfo.CreateSpecificCulture("en-US")) = @((invoiceItem.Quantity * invoiceItem.Price).ToString("C", CultureInfo.CreateSpecificCulture("en-US")))
+                    </div>
+                }
+            </div>
+            <div>@invoice.Invoice.Property.Name Total: @propertyTotal.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</div>
+            total += propertyTotal;
+        }
+        <div style="margin-top:15px;"><strong>Total:</strong> @total.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</div>
+    </div>
+</div>
+}
+else
+{
+    <span>An error has occurred.</span>
+}

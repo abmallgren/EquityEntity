@@ -1,0 +1,156 @@
+﻿@using EntityEquity.Common
+@using EntityEquity.Components
+@using EntityEquity.Data
+@using EntityEquity.Data.Models
+@using EntityEquity.Extensions
+@using EntityEquity.Hubs
+@using EntityEquity.Components.Shared
+@using EntityEquity.Models
+@using Microsoft.AspNetCore.SignalR.Client
+@using Newtonsoft.Json
+@using System.Globalization
+@using System.Net
+@using System.Text
+@using System.Text.Json
+@using System.Web
+@inject CookieBridgeConnection CookieBridgeConnection
+@inject IHttpClientFactory HttpClientFactory
+@implements IAsyncDisposable
+
+<PropertyTabs ActiveTab="PropertyTabs.PropertyTabType.Offerings"></PropertyTabs>
+
+<div class="flex-wrap-page">
+    <div class="action-panel">
+        <h2 class="panel-section-title">Filters/Action Targets</h2>
+        <div class="action-panel-grid">
+            <label>Properties</label>
+            <select multiple @onchange="OnChangeProperties">
+                @foreach (var property in Properties)
+                {
+                    <option value="@property.PropertyId">@property.Name</option>
+                }
+            </select>
+            <label>Inventories</label>
+            <select multiple @onchange="OnChangeInventories">
+                @foreach (var inventory in Inventories)
+                {
+                    <option value="@inventory.InventoryId">@inventory.Name</option>    
+                }
+            </select>
+        </div>
+        <h2 class="panel-section-title">Actions</h2>
+        <div class="action-panel-button">
+            <button type="button" data-bs-toggle="modal" data-bs-target="#addOfferingModal">Add Offering</button>
+        </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;margin-left: 15px">
+        @if (OfferingsWithProperties is not null)
+        {
+            foreach(var offeringsWithProperties in OfferingsWithProperties)
+            {
+                if (@offeringsWithProperties.Offering is not null && @offeringsWithProperties.Property is not null)
+                {
+                    <div class="offering-panel-offering tile">
+                        <div class="offering-panel-image-container">
+                            @if (offeringsWithProperties.Photos is not null && offeringsWithProperties.Photos.Count > 0)
+                            {
+                                <img class="offering-panel-image" src="@offeringsWithProperties.Photos.FirstOrDefault().Url" />
+                            }
+                            else
+                            {
+                                <div class="no-image">No Image</div>
+                            }
+                        </div>
+                        <div class="tile-title">
+                            @offeringsWithProperties.Offering.Name
+                        </div>
+                        <div class="word-break">
+                            Inventory Item: @offeringsWithProperties.Offering.InventoryItem.Name
+                        </div>
+                        <div class="word-break">
+                            Property: @offeringsWithProperties.Property.Name
+                        </div>
+                        <div>
+                            Cost: @offeringsWithProperties.Offering.InventoryItem.Cost.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))
+                        </div>
+                        <div>
+                            Price: @offeringsWithProperties.Offering.Price.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))
+                        </div>
+                        <button type="button" onclick="@(() => DeactivateOffering(@offeringsWithProperties.Offering.OfferingId))" class="deactivate">Deactivate</button>
+                    </div>
+                }
+            }
+        }
+    </div>
+</div>
+
+
+
+@code {
+    [Parameter]
+    public string? Cookie { get; set; }
+
+    private List<OfferingWithProperty> OfferingsWithProperties = new();
+    private List<Property> Properties = new();
+    private List<Inventory> Inventories = new();
+
+    private string[] propertyIds = new string[0];
+    private string[] inventoryIds = new string[0];
+
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = CookieBridgeConnection.GetHubConnection("/entityhub", Cookie!);
+
+        hubConnection.On("UpdateOfferings", async () =>
+        {
+            await UpdateOfferings();
+        });
+
+        await hubConnection.StartAsync();
+        await UpdateFilters();
+        await UpdateOfferings();
+    }
+    private async Task DeactivateOffering(int offeringId)
+    {
+        await hubConnection.InvokeAsync("DeactivateOffering", offeringId);
+        await UpdateOfferings();
+    }
+    private async Task UpdateOfferings()
+    {
+        HttpClient httpClient = CookieBridgeConnection.GetHttpClient(Cookie!);
+        string propertyIdString = propertyIds.Count() > 0 ? HttpUtility.UrlEncode(String.Join(',', propertyIds)) : "0";
+        string inventoryIdString = inventoryIds.Count() > 0 ? HttpUtility.UrlEncode(String.Join(',', inventoryIds)) : "0";
+        var response = await httpClient.GetStringAsync(
+            $"api/Offering?properties={propertyIdString}&inventories={inventoryIdString}");
+        OfferingsWithProperties = JsonConvert.DeserializeObject<List<OfferingWithProperty>>(response)!;
+        await InvokeAsync(StateHasChanged);
+    }
+    private async void OnChangeProperties(ChangeEventArgs args)
+    {
+        propertyIds = (string[])args.Value!;
+        await UpdateOfferings();
+    }
+    private async void OnChangeInventories(ChangeEventArgs args)
+    {
+        inventoryIds = (string[])args.Value!;
+        await UpdateOfferings();
+    }
+    private async Task UpdateFilters()
+    {
+        if (hubConnection is not null)
+        {
+            Properties = await hubConnection.InvokeAsync<List<Property>>("GetProperties");
+            Inventories = await hubConnection.InvokeAsync<List<Inventory>>("GetInventories");
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}

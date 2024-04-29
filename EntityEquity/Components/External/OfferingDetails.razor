@@ -1,0 +1,44 @@
+﻿@using EntityEquity.Common
+@using EntityEquity.Data
+@using EntityEquity.Data.Models;
+@using EntityEquity.Hubs
+@using Microsoft.AspNetCore.SignalR
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Globalization
+@inject CookieBridgeConnection CookieBridgeConnection
+@inject IHubContext<EntityHub> HubContext
+
+    @if (Offering is not null)
+    {
+        <h2>
+            @Offering.Offering.Name
+        </h2>
+        <div>
+            @Offering.Offering.Description
+        </div>
+        <div>
+            @Offering.Offering.ExtendedDescription
+        </div>
+        <div>
+            @Offering.Offering.Price.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))
+        </div>
+        <div>
+            <OrderQuantity Offering=@Offering Cookie=@Cookie />
+        </div>
+    }
+
+@code {
+    [Parameter]
+    public string Cookie { get; set; }
+    [Parameter]
+    public int OfferingId { get; set; }
+    public OfferingWithOrderItem Offering { get; set; }
+    private HubConnection? hubConnection;
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = CookieBridgeConnection.GetHubConnection("/entityhub", Cookie!);
+        await hubConnection.StartAsync();
+        Offering = await hubConnection.InvokeAsync<OfferingWithOrderItem>("GetOfferingDetails", OfferingId);
+        InvokeAsync(StateHasChanged);
+    }
+}
